@@ -789,3 +789,357 @@ ansible-playbook <playbook_name>.yml [options]
 * `ansible-playbook site.yml --syntax-check`  # Check playbook syntax without running it
 
 ---
+
+# 1️⃣ Facts (Ansible Facts)
+
+Facts are **automatic information collected by Ansible** about managed nodes.
+When a playbook runs, Ansible gathers:
+* OS type
+* IP address
+* Hostname
+* CPU
+* Memory
+* Disk
+* Network interfaces
+
+## 🔹 Example
+
+```yaml
+- hosts: all
+  tasks:
+    - name: Show OS
+      debug:
+        msg: "{{ ansible_distribution }}"
+```
+
+Output example:
+
+```
+Ubuntu
+```
+## 🔹 Disable Facts (If Not Needed)
+
+```yaml
+- hosts: all
+  gather_facts: no
+```
+✔ Improves performance.
+`ansible host-pattern -m setup`  # Show all facts of a host
+Facts are stored in `ansible_facts` and accessible as variables.
+
+---
+
+# 2️⃣ Variables
+
+Variables store values that can be reused.
+
+Example:
+
+```yaml
+- hosts: web
+  vars:
+    package_name: nginx
+  tasks:
+    - name: Install package
+      apt:
+        name: "{{ package_name }}"
+        state: present
+```
+
+## 🔹 Ways to Define Variables
+
+* In playbook (`vars:`)
+* In inventory
+* In `group_vars/`
+* In `host_vars/`
+* Extra vars (`-e`)
+
+Example:
+
+```bash
+ansible-playbook site.yml -e "package_name=apache2"
+```
+**Q: Variable precedence?**
+Extra vars (`-e`) have highest priority.
+
+---
+
+# 3️⃣ Handlers
+
+Handlers are tasks that only run **only when notified**.
+Used mainly for restarting services.
+
+## 🔹 Example
+
+```yaml
+tasks:
+  - name: Update nginx config
+    copy:
+      src: nginx.conf
+      dest: /etc/nginx/nginx.conf
+    notify: Restart nginx
+
+handlers:
+  - name: Restart nginx
+    service:
+      name: nginx
+      state: restarted
+```
+
+✔ Handler runs only if file changed.
+
+## 🎯 Interview Concept
+
+Handlers improve efficiency by avoiding unnecessary service restarts.
+
+---
+
+# 4️⃣ Tags
+
+Tags allow running specific tasks.
+
+## 🔹 Example
+
+```yaml
+- name: Install nginx
+  apt:
+    name: nginx
+  tags: nginx
+```
+
+Run only nginx tasks:
+
+```bash
+ansible-playbook site.yml --tags nginx
+```
+
+Skip:
+
+```bash
+ansible-playbook site.yml --skip-tags nginx
+```
+
+---
+
+# 5️⃣ Loops
+
+Loops repeat tasks.
+
+## 🔹 Example
+
+```yaml
+- name: Install multiple packages
+  apt:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - nginx
+    - git
+    - curl
+```
+## 🎯 Old Method (Still Asked in Interviews)
+
+`with_items` (older style)
+
+---
+
+# 6️⃣ Conditions (when)
+
+Conditions control task execution.
+
+## 🔹 Example
+
+```yaml
+- name: Install Apache on Ubuntu
+  apt:
+    name: apache2
+  when: ansible_distribution == "Ubuntu"
+```
+Only runs on Ubuntu.
+Condition keyword = `when`
+
+---
+
+# 7️⃣ Users and Groups in Ansible
+
+Used to manage system users and groups.
+
+---
+
+## 🔹 Create User
+
+```yaml
+- name: Create user
+  user:
+    name: devuser
+    state: present
+```
+
+---
+
+## 🔹 Create Group
+
+```yaml
+- name: Create group
+  group:
+    name: devgroup
+    state: present
+```
+
+---
+
+## 🔹 Add User to Group
+
+```yaml
+- name: Add user to group
+  user:
+    name: devuser
+    groups: devgroup
+    append: yes
+```
+
+---
+
+# 8️⃣ Template (Jinja2 Templates)
+
+Templates allow dynamic configuration files.
+File: `nginx.conf.j2`
+
+Example:
+
+```
+server_name {{ domain_name }};
+```
+
+Playbook:
+
+```yaml
+- name: Deploy template
+  template:
+    src: nginx.conf.j2
+    dest: /etc/nginx/nginx.conf
+```
+## 🎯 Why Templates?
+
+✔ Dynamic configs
+✔ Replace variables automatically
+✔ Used heavily in production
+
+---
+
+# 9️⃣ Collections
+
+Collections are bundles of:
+
+* Modules
+* Plugins
+* Roles
+
+Example:
+
+```bash
+ansible-galaxy collection install amazon.aws
+```
+
+Used for AWS modules.
+
+---
+
+# 🔟 Ansible Vault
+
+Used to encrypt sensitive data.
+
+## 🔹 Encrypt File
+
+```bash
+ansible-vault encrypt secrets.yml
+```
+## 🔹 Edit Encrypted File
+
+```bash
+ansible-vault edit secrets.yml
+```
+## 🔹 Run Playbook with Vault
+
+```bash
+ansible-playbook site.yml --ask-vault-pass
+```
+## 🎯 Interview Concept
+
+Vault protects:
+
+* Passwords
+* API keys
+* Private data
+
+---
+
+# 1️⃣1️⃣ Roles
+
+Ansible Roles is a way to organize playbooks into reusable components.
+
+## 🔹 Role Structure
+
+```
+roles/
+  nginx/
+    tasks/
+    handlers/
+    templates/
+    files/
+    vars/
+```
+## 🔹 Use Role in Playbook
+
+```yaml
+- hosts: web
+  roles:
+    - nginx
+```
+## 🎯 Why Roles?
+
+✔ Modular
+✔ Reusable
+✔ Production standard
+
+---
+
+# 1️⃣2️⃣ Ansible Galaxy
+
+Ansible Galaxy is a public repository for roles and collections.
+
+## 🔹 Install Role
+
+```bash
+ansible-galaxy install geerlingguy.nginx
+```
+
+## 🔹 Create New Role
+
+```bash
+ansible-galaxy init myrole
+```
+
+## 🎯 Interview Concept
+
+Galaxy helps reuse community-built automation.
+
+---
+
+# 🚀 Quick Interview Revision Summary
+
+* Facts → System information
+* Variables → Store values
+* Handlers → Run when notified
+* Tags → Select tasks
+* Loops → Repeat tasks
+* Conditions → Control execution
+* User/Group → Manage system accounts
+* Template → Dynamic configs
+* Collections → Bundle of modules/plugins
+* Vault → Encrypt secrets
+* Roles → Modular automation
+* Galaxy → Community repository
+
+---
+
