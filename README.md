@@ -7,6 +7,8 @@
   5. How Ansible Works (Step-by-Step)
   6. Ansible vs Other Tools
   7. Ansible Setup Overview
+  8. Core Components of Ansible Configuration
+  9. Most Commonly Used Ansible Commands
 ---
 
 ## 1️⃣ What is Ansible?
@@ -703,11 +705,12 @@ Interview Tip:
 
 ## 9️⃣ Most Commonly Used Ansible Commands
 
-We divide into 3 categories:
+We divide into 4 categories:
 
 1. Ad-hoc commands
 2. Inventory commands
-3. Playbook commands
+3. Module documentation Commands
+4. Playbook commands
 
 ### 1️⃣ Ad-hoc Commands (Quick One-Time Commands)
 
@@ -736,11 +739,9 @@ ansible <host-pattern> -m <module> -a "<module-arguments>" -b --ask-become-pass
 * `ansible server -m user -a "name=testuser state=present"`  # Create a new user
 * `ansible server -m service -a "name=nginx state=started"`  # Start or stop a service
 * `ansible server -m apt -a "name=vim state=latest"`  # Install/upgrade package on Ubuntu
-* `ansible server -m yum -a "name=httpd state=present"`  # Install package on RHEL/CentOS
 * `ansible server -m copy -a "src=/tmp/file.txt dest=/tmp/file.txt mode=0777"`  # Copy a file to target server
 * `ansible server -m fetch -a "src=/tmp/file.txt dest=~/files"`  # Fetch file from target to control node
-
----
+* `ansible server -m setup` # setup module performs **fact-gathering**
 
 ### ✅ Key Notes
 
@@ -749,189 +750,42 @@ ansible <host-pattern> -m <module> -a "<module-arguments>" -b --ask-become-pass
 * Ad-hoc commands are good for **quick tasks** or testing connectivity.
 * For **repeated tasks or multiple steps**, use **playbooks** instead.
 
-### 🔴🔴 B. Inventory Commands
+### 2️⃣ Inventory Commands
+* `ansible-inventory --list`  # Display full inventory in JSON format (hosts, groups, variables)
+* `ansible-inventory --graph`  # Show inventory in tree/graph format (group hierarchy)
+* `ansible-inventory --host <hostname>`  # Show variables assigned to a specific host
+* `ansible-inventory -i <inventory_file> --list`  # Use a custom inventory file and display its content
+* `ansible-inventory -i <inventory_file> --graph`  # Show graph view of a custom inventory file
+* `ansible-inventory --yaml --list`  # Display inventory output in YAML format (easier to read than JSON)
+* `ansible all --list-hosts`  # List all hosts that match the pattern (without running tasks)
+* `ansible <group_name> --list-hosts`  # List hosts inside a specific group
 
----
+### 3️⃣ Module Documentation Commands
+* `ansible-doc -l` # List all available Ansible modules
+* `ansible-doc <module_name>` # Show full detailed documentation of a specific module
+* `ansible-doc -s <module_name>` # Show short syntax summary of a module (quick usage format)
 
-### 4️⃣ View Full Inventory
+### 4️⃣ Playbook Commands
 
+#### General Syntax
 ```bash
-ansible-inventory --list
+ansible-playbook <playbook_name>.yml [options]
 ```
-
-Shows:
-
-* Hosts
-* Groups
-* Variables
-* JSON format
-
----
-
-### 5️⃣ View Inventory Graph
-
-```bash
-ansible-inventory --graph
-```
-
-Shows visual group structure:
-
-```
-@all:
-  |--@web:
-  |  |--192.168.1.10
-```
-
-Very helpful for debugging.
-
----
-
-# 🔴🔴 C. Module Documentation Commands
-
----
-
-### 6️⃣ List All Modules
-
-```bash
-ansible-doc -l
-```
-
-Shows all available modules.
-
----
-
-### 7️⃣ Detailed Module Documentation
-
-```bash
-ansible-doc apt
-```
-
-Shows:
-
-* Parameters
-* Examples
-* Usage
-
----
-
-### 8️⃣ Short Summary of Module
-
-```bash
-ansible-doc -s apt
-```
-
-Shows quick usage format.
-
-Very useful during interview preparation.
-
----
-
-# 🔴🔴 D. Playbook Commands
-
----
-
-### 9️⃣ Run Playbook
-
-```bash
-ansible-playbook site.yml
-```
-
-Executes full automation.
-
----
-
-### 🔟 Dry Run (Check Mode)
-
-```bash
-ansible-playbook site.yml --check
-```
-
-✔ Shows what will change
-✔ Does NOT apply changes
-
-Very important for production.
-
----
-
-### 1️⃣1️⃣ Show Changes (Diff Mode)
-
-```bash
-ansible-playbook site.yml --diff
-```
-
-Shows difference before and after changes.
-
-Great for configuration files.
-
----
-
-### 1️⃣2️⃣ Limit to Specific Host
-
-```bash
-ansible-playbook site.yml --limit web
-```
-
-Runs playbook only on web group.
-
----
-
-### 1️⃣3️⃣ Run Specific Tags
-
-```bash
-ansible-playbook site.yml --tags nginx
-```
-
-Runs only tasks tagged as nginx.
-
-Example:
-
-```yaml
-- name: Install nginx
-  apt:
-    name: nginx
-  tags: nginx
-```
-
----
-
-### 1️⃣4️⃣ Start From Specific Task
-
-```bash
-ansible-playbook site.yml --start-at-task "Install nginx"
-```
-
-Useful if playbook failed halfway.
-
----
-
-### 1️⃣5️⃣ Verbose Mode
-
-```bash
-ansible-playbook site.yml -v
-```
-
-More verbosity:
-
-* -v
-* -vv
-* -vvv
-* -vvvv (debug level)
-
-Used for troubleshooting.
-
----
-
-# 🚀 Quick Revision Summary
-
-✔ Ansible solves manual configuration problem
-✔ ansible.cfg controls behavior
-✔ hosts file defines target systems
-✔ roles organize automation
-✔ ansible -m ping tests connectivity
-✔ ansible-doc shows module help
-✔ ansible-playbook runs automation
-✔ --check = dry run
-✔ --limit = run on selected hosts
-✔ --tags = run specific tasks
+#### Most Common Playbook Commands
+* `ansible-playbook site.yml`  # Run the playbook normally
+* `ansible-playbook site.yml -i inventory`  # Use a custom inventory file
+* `ansible-playbook site.yml --check`  # Dry run (simulate changes without applying them)
+* `ansible-playbook site.yml --diff`  # Show differences between current and desired state
+* `ansible-playbook site.yml --limit web`  # Run playbook only on "web" group
+* `ansible-playbook site.yml --limit 192.168.1.10`  # Run playbook on a specific host
+* `ansible-playbook site.yml --tags nginx`  # Run only tasks tagged as "nginx"
+* `ansible-playbook site.yml --skip-tags db`  # Skip tasks tagged as "db"
+* `ansible-playbook site.yml --start-at-task "Install nginx"`  # Start execution from a specific task
+* `ansible-playbook site.yml -v`  # Verbose mode (more details)
+* `ansible-playbook site.yml -vv`  # More verbosity
+* `ansible-playbook site.yml -vvv`  # Debug-level verbosity
+* `ansible-playbook site.yml --ask-pass`   # Ask for SSH password
+* `ansible-playbook site.yml --ask-become-pass`  # Ask for sudo password
+* `ansible-playbook site.yml --syntax-check`  # Check playbook syntax without running it
 
 ---
