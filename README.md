@@ -466,8 +466,7 @@ Example:
 * Defined in playbook, inventory, group_vars, host_vars
 * `-e` has highest priority
 * Use `{{ variable }}` syntax
-* Support strings, numbers, boolen, lists, dictionaries
+* Support strings, numbers, boolean, lists, dictionaries
 * `register` captures task output
 * Facts are auto-generated variables
 
----
