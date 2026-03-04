@@ -1,163 +1,72 @@
-# 👉 Overview
-  What we'll cover:
-  1. What is Ansible?
-  2. Why Ansible?
-  3. Key Advantages of Ansible
-  4. Core Architecture of Ansible
-  5. How Ansible Works (Step-by-Step)
-  6. Ansible vs Other Tools
-  7. Ansible Setup Overview
-  8. Core Components of Ansible Configuration
-  9. Most Commonly Used Ansible Commands
----
+# Variables in Ansible
 
-## 1️⃣ What is Ansible?
+Variables in Ansible are used to store values that can change.
+They make playbooks **dynamic, reusable, and flexible**.
+Instead of hardcoding values like usernames, ports, or package names, we use variables.
 
-**Ansible is an open-source automation tool** used for:
-
-* Configuration Management
-* Application Deployment
-* Server Management
-* Infrastructure Automation
-
-It helps you automate repetitive tasks like:
-
-* Installing software
-* Updating servers
-* Creating users
-* Deploying applications
-* Configuring cloud resources
-
-👉 Instead of logging into 20 servers manually, you write **one playbook** and Ansible does everything automatically.
-
-### Simple Definition (Interview Version)
-
-> **Ansible is an agentless configuration management and automation tool that uses YAML playbooks to manage servers over SSH.**
-
----
-## 2️⃣ Why Ansible
-
-Before using any tool, you must understand **why it exists**.
-
-### 🔹 Problem Before Ansible
-
-Imagine you have:
-
-* 20 Linux servers
-* Need to install NGINX
-* Need to create users
-* Need to update packages
-
-Without automation:
-
-* SSH into each server manually
-* Run commands one by one
-* High chance of mistakes
-* Not scalable
-
-### 🔹 Why Ansible Was Created
-
-Ansible solves:
-
-- Manual repetitive work
-- Configuration inconsistency
-- Human errors
-- Slow deployments
-- Complex automation scripting
-
-### 🔹 Why Companies Use Ansible
-
-* Simple YAML syntax
-* No agents required
-* Fast setup
-* Easy to learn
-* Powerful for large infrastructure
-
----
-## 3️⃣ Key Advantages of Ansible
-
-### 1. Agentless
-
-* No agent installation required on target servers.
-* Uses **SSH (Linux)** and **WinRM (Windows)**.
-* Less maintenance
-* No extra services running on servers
-
-### 2. Simple YAML Syntax
-
-Uses Ansible Playbooks, which are **YAML** files that define the desired state of the system and the tasks to achieve that state.
-Ansible uses **YAML**, which is human-readable.
-
-Example:
+### ❌ Hardcoded
 
 ```yaml
-- name: Installing Nginx
-  hosts: web
+- name: Install nginx
+  apt:
+    name: nginx
+    state: present
+```
+
+### ✅ Using Variable
+
+```yaml
+- name: Install package
+  apt:
+    name: "{{ package_name }}"
+    state: present
+```
+
+Now `package_name` can change without modifying the task.
+
+## 1️⃣ How to Define Variables
+
+Variables can be defined in multiple places.
+
+- In playbook (vars)
+- In inventory
+- In group_vars and host_vars
+- Command Line Variables Using extra vars (-e) ← Highest priority
+- Using vars_files
+- Using register
+- Using vars_prompt
+- Using environment variables
+- Using role defaults e.g. roles/nginx/defaults/main.yml
+
+### ✅ 1. In Playbook (vars section)
+
+```yaml
+- hosts: web
+  vars:
+    package_name: nginx
+    http_port: 80
+
   tasks:
-    - name: Install NGINX
+    - name: Install package
       apt:
-        name: nginx
+        name: "{{ package_name }}"
         state: present
 ```
 
-Very easy to understand even for beginners.
-
-### 3. Idempotent
-
-**Idempotent means:**
-Running the same playbook multiple times will not change the system if it is already in the desired state.
-
-### 4. Push-Based Architecture
-
-* Control node pushes configuration to servers.
-* No need for servers to pull configuration.
-
-### 5. Large Module Library
-
-Ansible has 3000+ built-in modules for:
-
-* Linux
-* Windows
-* AWS
-* Azure
-* Docker
-* Kubernetes
-* Network devices
-
-Modules are reusable and can be used in playbooks to perform specific tasks.
+- Simple
+- Good for small playbooks
+- ❌ NOT good for production
 
 ---
 
+### ✅ 2. In Inventory File
 
-## 4️⃣ Core Architecture of Ansible
-
-Ansible architecture is very simple.
-
-### 1. Control Node
-
-* Machine where Ansible is installed.
-* Executes playbooks.
-* Connects to managed nodes.
-
-### 2. Managed Nodes (Target Nodes)
-
-* Servers being managed.
-* No agent required.
-* Must have SSH access.
-
-### 3. Inventory
-
-File that defines:
-
-* Which servers or server groups to manage
-* Lists IP addresses or hostnames of servers and variables associated with them.
-
-Example:
+#### INI Format
 
 ```ini
 [web]
-server1 ansible_host=192.168.1.10
-server2 ansible_host=192.168.1.11
+server1 ansible_host=192.168.1.10 http_port=80
+server2 ansible_host=192.168.1.11 https_port=443
 
 [db]
 database1 ansible_host=192.168.1.20
@@ -170,976 +79,395 @@ ansible_ssh_private_key_file=/root/db-key.pem
 ansible_user=ubuntu
 ```
 
-### 4. Playbooks
+#### Inventory file YAML Format
 
-YAML files that define:
+```yaml
+all:
+  vars:
+    ansible_user: ubuntu
 
-* Which hosts to target
-* What tasks to perform
-* How to perform those tasks
+  children:
 
-Example:
+    web:
+      hosts:
+        web1:
+          ansible_host: 192.168.1.20
+          http_port: 8080
+        web2:
+          ansible_host: 192.168.1.21
+      vars:
+        max_clients: 200
+
+    db:
+      hosts:
+        db1:
+          ansible_host: 192.168.1.30
+          db_port: 5432
+      vars:
+        db_engine: postgres
+```
+
+- `all` → top-level group (default in Ansible)
+- `children` → defines groups
+- `web`, `db` → group names
+- `hosts` → hosts inside each group
+- `ansible_host` → actual IP address
+- **Variables Priority:**  *Host variables > Group variables > All variables* 
+- Useful for environment-specific values
+
+---
+
+### ✅ 3. group_vars and host_vars
+
+They are special directories that Ansible automatically reads for variables. You do NOT declare them manually.
+If they exist in the correct location, Ansible loads them automatically.
+
+#### 🔹 Standard Inventory Structure (Best Practice)
+
+If your inventory contains:
+
+```ini
+[web]
+server1
+server2
+```
+```
+project/
+│
+├── inventory/
+│    ├── hosts
+│    ├── group_vars/
+│    │     └── web.yml  
+│    └── host_vars/
+│          └── server1.yml
+└── site.yml
+```
+#### 🔹 Important Rule ⭐
+
+Ansible loads variables based on:
+
+* Inventory hostname
+* Inventory group name
+If name does not match → variables will NOT load.
+
+- So, the filenames `web.yml` and `server1.yml` must match the **group and host names exactly**
+- Variables in `web.yml` applies to all hosts in group `web`.
+- Variables in `server1.yml` applies only to `server1`.
+
+#### 🔹 Can group_vars and host_vars Be Placed Elsewhere?
+
+Yes, They can be:
+
+### Option 1 (Inside inventory folder)
+
+```
+inventory/group_vars/
+inventory/host_vars/
+```
+
+### Option 2 (At project root level)
+
+```
+group_vars/
+host_vars/
+```
+
+Both are valid if Ansible can find inventory correctly.
+
+#### 🔹 Variable Precedence (Between Them)
+
+If both define same variable:
+
+| Source     | Priority |
+| ---------- | -------- |
+| group_vars | Lower    |
+| host_vars  | Higher   |
+
+Host-specific overrides group-specific.
+
+---
+
+### ✅ 4. Command Line Variables (Highest Priority ⭐)
+
+```bash
+ansible-playbook site.yml -e "package_name=apache2"
+```
+Or JSON format:
+
+```bash
+ansible-playbook site.yml -e '{"app_port":9090}'
+```
+---
+
+### ✅ 5. From External File (vars_files)
+
+`vars_files` can load variable files from **ANY path you specify**.
+
+```yaml
+vars_files:
+  - vars/common.yml
+  - /home/user/external_vars.yml
+```
+
+---
+
+### ✅ 6. Registered Variables (From Task Output)
+
+`register` captures output of a task into a variable.
+
+```yaml
+- name: Check disk space
+  shell: df -h
+  register: disk_output
+
+- debug:
+    var: disk_output.stdout
+```
+`disk_output` becomes a variable.
+- Dynamic
+- Used with conditions
+
+---
+
+### ✅ 7. Prompting User for Variables Using `vars_prompt` (User Input)
+
+Ask user for value at runtime.
 
 ```yaml
 - hosts: web
-  tasks:
-    - name: Install NGINX
-      apt:
-        name: nginx
-        state: present
+  vars_prompt:
+    - name: username
+      prompt: "Enter your username"
+      private: no
 ```
 
-### 5. Modules
-
-Modules are Small programs that perform tasks.
-
-Examples:
-
-* `apt`
-* `yum`
-* `service`
-* `copy`
-* `file`
-* `user`
-
-### Architecture Summary
-
-Control Node → SSH → Managed Nodes → Executes Modules → Returns Result
+Used when sensitive input is needed, like passwords etc.
 
 ---
 
-## 5️⃣ How Ansible Works (Step-by-Step)
+### ✅ 8.  Environment Variables
 
-Let’s understand the workflow:
-
-### Step 1:
-
-You write a playbook in YAML, for example `install-nginx.yml`.
-
-### Step 2:
-
-You define target servers in inventory.
-
-### Step 3:
-
-You run:
-
-```bash
-ansible-playbook install-nginx.yml
-```
-
-### Step 4:
-
-Ansible:
-
-* Connects to servers via SSH
-* Copies module temporarily
-* Executes it
-* Removes it after execution
-* Shows output
-
----
-
-## 6️⃣ Ansible vs Other Tools
-
-### ➡️ Ansible vs Puppet
-
-| Feature        | Ansible   | Puppet      |
-| -------------- | --------- | ----------- |
-| Architecture   | Agentless | Agent-based |
-| Language       | YAML      | Puppet DSL  |
-| Communication  | Push      | Pull        |
-| Learning Curve | Easy      | Medium      |
-
-#### Interview Tip:
-
-> Ansible is easier and agentless. Puppet requires agent installation and has more complex setup.
-
-### ➡️ Ansible vs Chef
-
-| Feature        | Ansible | Chef         |
-| -------------- | ------- | ------------ |
-| Language       | YAML    | Ruby         |
-| Agent Required | No      | Yes          |
-| Setup          | Easy    | Complex      |
-| Complexity     | Simple  | More complex |
-
-Chef uses Ruby DSL, which is harder for beginners.
-
-### ➡️ Ansible vs Terraform
-
-This is VERY IMPORTANT for interviews.
-
-| Feature    | Ansible                   | Terraform                   |
-| ---------- | ------------------------- | --------------------------- |
-| Purpose    | Configuration Management  | Infrastructure Provisioning |
-| State File | No central state required | Uses state file             |
-| Best For   | Installing software       | Creating cloud resources    |
-
-#### Simple Explanation
-
-* **Terraform creates infrastructure**
-
-  * EC2
-  * VPC
-  * Load Balancer
-
-* **Ansible configures infrastructure**
-
-  * Install NGINX
-  * Configure app
-  * Setup users
-
-#### Example Real DevOps Flow
-
-1. Terraform creates EC2 servers
-2. Ansible installs Docker & deploys app
-
-Both tools are used together in real projects.
-
----
-
-## Final Quick Revision
-
-- Ansible = Automation tool
-- Python Based
-- Managed by RedHat
-- Agentless
-- Uses YAML
-- Push-based
-- Idempotent 
-- Control Node (Ansible Installed) + Managed Nodes
-- SSH-based execution
-- Used for configuration management
-
----
-
-## 7️⃣ Ansible Setup Overview
-
-Ansible setup is simple. It requires:
-  1. Install Ansible on Control Node
-  2. Create Inventory File
-  3. Prepare Managed Nodes
-  4. Write Playbooks
-  5. Run Playbook
-
-### ✅ Step 1: Install Ansible on Control Node
-
-Control Node = The machine where you run Ansible commands.
-
-Example:
-
-* Your laptop
-* A Linux VM
-* A CI/CD server
-
-#### Install Using pip (Recommended & Simple)
-
-```bash
-python3 -m pip install ansible
-```
-
-Verify:
-
-```bash
-ansible --version
-```
-**OR You can reffer to [Ansible Community Documentation](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html) for more installation methods for different operating systems.**
-
-### ✅ Step 2: Create Inventory File
-
-Inventory file contains:
-
-* List of target machines
-* Grouping of servers
-
-Example:
-
-```ini
-[web]
-192.168.1.10
-192.168.1.11
-
-[db]
-192.168.1.20
-```
-
-### ✅ Step 3: Prepare Managed Nodes
-
-Each target machine must have:
-
-* Python installed (usually pre-installed on Linux)
-* SSH access enabled
-* Passwordless SSH configured (recommended)
-
-#### What is Passwordless SSH Access (VERY IMPORTANT)
-
-Instead of typing password:
-
-* SSH uses private/public key authentication.
-* Secure and automated.
-
-Ansible uses SSH to connect to Linux machines.
-If SSH asks for password every time → Automation breaks.
-So we configure **Passwordless SSH** using SSH keys.
-
-#### 🔴 Step 1: Generate SSH Key on Control Node
-
-```bash
-ssh-keygen -t rsa -b 2048
-```
-
-Press Enter → It creates:
-
-* Private key → `~/.ssh/id_rsa`
-* Public key → `~/.ssh/id_rsa.pub`
-
-#### 🔴 Step 2: Copy Public Key to Target Machine
-
-##### 🔹 Method 1: Using ssh-copy-id (Recommended)
-
-```bash
-ssh-copy-id user@target_ip
-```
-
-Example:
-
-```bash
-ssh-copy-id ubuntu@192.168.1.10
-```
-
-This automatically adds the public key to:
-
-```
-~/.ssh/authorized_keys
-```
-
-##### 🔹 Method 2: Manual Copy
-
-1. Open public key:
-
-```bash
-cat ~/.ssh/id_rsa.pub
-```
-
-2. Copy the output.
-
-3. Paste into target machine:
-
-```
-~/.ssh/authorized_keys
-```
-
-##### 🔹 Method 3: Using Private Key File (Cloud Example)
-
-When you create a compute instance on a cloud platform (like AWS, Azure, etc.), you select a **key pair** during creation.
-
-The cloud platform automatically:
-
-* Adds the **public key** to the server
-* Stores it inside the `~/.ssh/authorized_keys` file of that machine
-
-Because of this, you can connect to the server using the **private key** from your local machine.
-
-In Ansible, you can enable passwordless SSH by using the built-in variables:
-
-```ini
-ansible_user=user
-ansible_ssh_private_key_file=/path/to/private-key
-```
-
-Example in inventory file:
-
-```ini
-[web]
-192.168.1.10 ansible_user=user ansible_ssh_private_key_file=~/.ssh/id_rsa
-```
-
-This tells Ansible to:
-
-* Use the specified private key
-* Authenticate without asking for a password
-
-**Behind the scenes, Ansible connects to the target machine using SSH, just like we do manually.**
-
-It runs a command similar to:
-
-```bash
-ssh -i /path/to/private-key user@ip-address
-```
-
-So basically:
-
-* `-i` → Specifies the private key file
-* `user` → Remote server username
-* `ip-address` → Target machine IP
-
-If using AWS EC2:
-
-Example inventory:
-
-```ini
-[web]
-18.209.43.91 ansible_user=ubuntu ansible_ssh_private_key_file=/root/my-key.pem
-```
-
-Important variables:
-
-* `ansible_host` → IP address
-* `ansible_user` → SSH user
-* `ansible_ssh_private_key_file` → Path of private key
-
-#### 🔴 Step 3: Test SSH Access
-
-From control node:
-
-```bash
-ssh ubuntu@192.168.1.10
-```
-
-If it logs in without password → Success ✅
-
-### 🔶 Verify Ansible Connection
-
-Test using ping module:
-
-```bash
-ansible all -m ping
-```
-
-Expected output:
-
-```
-192.168.1.10 | SUCCESS => {
-    "ping": "pong"
-}
-```
-
-📌 Important:
-This is not ICMP ping.
-It is Ansible module test.
-
-### 🔶 How Ansible Works Internally (During SSH)
-
-When you run:
-
-```bash
-ansible all -m ping
-```
-
-Ansible:
-
-1. Connects via SSH
-2. Copies Python module temporarily
-3. Executes it
-4. Deletes module
-5. Returns result
-
-✔ No agent installed
-✔ Temporary execution
-
-### 🔶 Common Issues & Fixes
-
-#### ❌ Permission Denied (Publickey)
-
-Fix:
-
-```bash
-chmod 600 ~/.ssh/id_rsa
-chmod 700 ~/.ssh
-```
-
-#### ❌ Python Not Found on Target
-
-Install Python:
-
-```bash
-sudo apt install python3
-```
-
-#### ❌ SSH Connection Refused
-
-Check:
-
-* SSH service running?
-* Security group open? (Cloud)
-* Firewall rules?
-
-### ✅ Step 4: Write Playbooks
-
-Playbooks define automation tasks.
-
-Example:
+You can fetch environment variable:
 
 ```yaml
-- hosts: web
-  tasks:
-    - name: Install nginx
-      apt:
-        name: nginx
-        state: present
+app_port: "{{ lookup('env','APP_PORT') }}"
 ```
 
-### ✅ Step 5: Run Playbook
+If system has:
 
 ```bash
-ansible-playbook install-nginx.yml
+export APP_PORT=8080
 ```
 
-Ansible connects → Executes → Shows result.
+✔ Useful in CI/CD pipelines
 
 ---
 
-## Quick Revision Summary
+### ✅ 9. Using Role Defaults
 
-- Install Ansible on control node
-- Create inventory file
-- Setup SSH key authentication
-- Ensure Python installed on targets
-- Test using ansible all -m ping
-- Run playbooks
-
----
-
-## 8️⃣ Core Components of Ansible Configuration
-
-When you install Ansible you get a default configuration directory `/etc/ansible`:
-
-```bash
-$ ls /etc/ansible/
-ansible.cfg
-hosts
-roles/
-```
-These are the core configuration components. They control how Ansible connects, what systems it manages, and how automation is organized.
-
-### 🔹 1. ansible.cfg (Main Configuration File)
-
-It contains settings that control Ansible's behavior.
-This file controls:
-
-* Default inventory location
-* SSH settings
-* Logging
-* Privilege escalation
-* Module paths
-
-Example snippet:
-
-```ini
-[defaults]
-inventory = /etc/ansible/hosts
-remote_user = ubuntu
-host_key_checking = False
-```
-
-📌 Important:
-
-Ansible checks config file in this order:
-
-1. ansible.cfg (current directory)
-2. ~/.ansible.cfg
-3. /etc/ansible/ansible.cfg
-
-### 🔹 2. hosts (Inventory File)
-
-This is the default inventory file that defines:
-
-* Target servers
-* Server Groups
-* Variables associated with them
-
-Example:
-
-```ini
-[web]
-192.168.1.10
-192.168.1.11
-
-[db]
-192.168.1.20
-```
-
-With variables:
-
-```ini
-[web]
-192.168.1.10 ansible_user=ubuntu
-```
-
-Inventory tells Ansible:
-👉 “Where should I run my automation?”
-
-### 🔹 3. roles Directory
-
-Roles are used to organize automation code. By using roles, you can create reusable and modular automation code.
-
-Instead of writing one big playbook, we divide tasks into reusable components.
-
-Example role structure:
+Inside role directory:
 
 ```
 roles/
-  nginx/
-    tasks/
-      main.yml
-    handlers/
-      main.yml
-    templates/
-    files/
-    vars/
+ └── nginx/
+      └── defaults/
+            └── main.yml
 ```
 
-Why roles?
-
-- Reusable
-- Modular
-- Clean structure
-- Production-ready
-
-Interview Tip:
-
-> Roles are used to create reusable and organized automation units.
-
----
-
-## 9️⃣ Most Commonly Used Ansible Commands
-
-We divide into 4 categories:
-
-1. Ad-hoc commands
-2. Inventory commands
-3. Module documentation Commands
-4. Playbook commands
-
-### 1️⃣ Ad-hoc Commands (Quick One-Time Commands)
-
-#### **General Structure**
-
-```
-ansible <host-pattern> -m <module> -a "<module-arguments>" -b --ask-become-pass
-```
-
-**Where:**
-
-* `<host-pattern>` → Target host(s) or group(s) from your inventory
-* `-m <module>` → Ansible module to use (e.g., ping, shell, command, yum, apt)
-* `-a "<module-arguments>"` → Arguments to the module (optional for some modules)
-* `-b --ask-become-pass` → Give Root privilege   
-
-#### **Most Commonly Used Ad-Hoc Commands**
-
-* `ansible localhost -m ping`  # Test connection to local machine
-* `ansible all -m ping`  # Test connectivity to all hosts
-* `ansible server -m shell -a "free -h"`  # Show memory info on target server
-* `ansible server -m shell -a "uptime"`  # Show uptime of target server
-* `ansible server -m shell -a "df -h"`  # Check disk usage
-* `ansible server -m shell -a "who"`  # See logged in users
-* `ansible server -m command -a "ls -l /etc"`  # Run simple command (doesn’t go through shell)
-* `ansible server -m user -a "name=testuser state=present"`  # Create a new user
-* `ansible server -m service -a "name=nginx state=started"`  # Start or stop a service
-* `ansible server -m apt -a "name=vim state=latest"`  # Install/upgrade package on Ubuntu
-* `ansible server -m copy -a "src=/tmp/file.txt dest=/tmp/file.txt mode=0777"`  # Copy a file to target server
-* `ansible server -m fetch -a "src=/tmp/file.txt dest=~/files"`  # Fetch file from target to control node
-* `ansible server -m setup` # setup module performs **fact-gathering**
-
-### ✅ Key Notes
-
-* **Use `-m shell`** for shell commands that require pipes, redirection, or environment variables.
-* **Use `-m command`** for simple commands without shell features (safer).
-* Ad-hoc commands are good for **quick tasks** or testing connectivity.
-* For **repeated tasks or multiple steps**, use **playbooks** instead.
-
-### 2️⃣ Inventory Commands
-* `ansible-inventory --list`  # Display full inventory in JSON format (hosts, groups, variables)
-* `ansible-inventory --graph`  # Show inventory in tree/graph format (group hierarchy)
-* `ansible-inventory --host <hostname>`  # Show variables assigned to a specific host
-* `ansible-inventory -i <inventory_file> --list`  # Use a custom inventory file and display its content
-* `ansible-inventory -i <inventory_file> --graph`  # Show graph view of a custom inventory file
-* `ansible-inventory --yaml --list`  # Display inventory output in YAML format (easier to read than JSON)
-* `ansible all --list-hosts`  # List all hosts that match the pattern (without running tasks)
-* `ansible <group_name> --list-hosts`  # List hosts inside a specific group
-
-### 3️⃣ Module Documentation Commands
-* `ansible-doc -l` # List all available Ansible modules
-* `ansible-doc <module_name>` # Show full detailed documentation of a specific module
-* `ansible-doc -s <module_name>` # Show short syntax summary of a module (quick usage format)
-
-### 4️⃣ Playbook Commands
-
-#### General Syntax
-```bash
-ansible-playbook <playbook_name>.yml [options]
-```
-#### Most Common Playbook Commands
-* `ansible-playbook site.yml`  # Run the playbook normally
-* `ansible-playbook site.yml -i inventory`  # Use a custom inventory file
-* `ansible-playbook site.yml --check`  # Dry run (simulate changes without applying them)
-* `ansible-playbook site.yml --diff`  # Show differences between current and desired state
-* `ansible-playbook site.yml --limit web`  # Run playbook only on "web" group
-* `ansible-playbook site.yml --limit 192.168.1.10`  # Run playbook on a specific host
-* `ansible-playbook site.yml --tags nginx`  # Run only tasks tagged as "nginx"
-* `ansible-playbook site.yml --skip-tags db`  # Skip tasks tagged as "db"
-* `ansible-playbook site.yml --start-at-task "Install nginx"`  # Start execution from a specific task
-* `ansible-playbook site.yml -v`  # Verbose mode (more details)
-* `ansible-playbook site.yml -vv`  # More verbosity
-* `ansible-playbook site.yml -vvv`  # Debug-level verbosity
-* `ansible-playbook site.yml --ask-pass`   # Ask for SSH password
-* `ansible-playbook site.yml --ask-become-pass`  # Ask for sudo password
-* `ansible-playbook site.yml --syntax-check`  # Check playbook syntax without running it
-
----
-
-# 1️⃣ Facts (Ansible Facts)
-
-Facts are **automatic information collected by Ansible** about managed nodes.
-When a playbook runs, Ansible gathers:
-* OS type
-* IP address
-* Hostname
-* CPU
-* Memory
-* Disk
-* Network interfaces
-
-## 🔹 Example
+`defaults/main.yml`
 
 ```yaml
-- hosts: all
-  tasks:
-    - name: Show OS
-      debug:
-        msg: "{{ ansible_distribution }}"
+app_port: 80
 ```
 
-Output example:
-
-```
-Ubuntu
-```
-## 🔹 Disable Facts (If Not Needed)
-
-```yaml
-- hosts: all
-  gather_facts: no
-```
-✔ Improves performance.
-`ansible host-pattern -m setup`  # Show all facts of a host
-Facts are stored in `ansible_facts` and accessible as variables.
+- Lowest precedence
+- Used for default values
 
 ---
 
-# 2️⃣ Variables
+### ✅ 10. Using Facts -  Special Built-in Variables (Facts)
 
-Variables store values that can be reused.
+Ansible automatically collects system information called **facts**.
 
 Example:
+
+```yaml
+{{ ansible_hostname }}
+{{ ansible_os_family }}
+{{ ansible_ip_addresses }}
+```
+
+These are variables collected during fact gathering.
+
+---
+
+## 2️⃣ Variable Precedence (Very Important ⭐⭐)
+
+When same variable is defined in multiple places, Ansible follows priority order.
+
+From lowest → highest:
+
+| Method           | When Used            | Priority  |
+| ---------------- | -------------------- | --------- |
+| Role defaults    | Default values       | Lowest    |
+| Inventory        | Host/group config    | Medium    |
+| group_vars       | Environment config   | High      |
+| host_vars        | Host-specific config | High      |
+| vars in playbook | Simple setups        | High      |
+| register         | Store task output    | Higher    |
+| Extra vars (-e)  | Override everything  | Highest ⭐ |
+
+---
+
+## 3️⃣ Variable Types in Ansible
+
+Ansible uses YAML data types.
+
+### 🔹 1. String
+
+```yaml
+name: "John"
+```
+
+### 🔹 2. Number
+
+```yaml
+port: 8080
+```
+
+### 🔹 3. Boolean
+
+```yaml
+enabled: true
+```
+
+### 🔹 4. List
+
+```yaml
+packages:
+  - nginx
+  - git
+  - curl
+```
+
+Usage:
+
+```yaml
+name: "{{ packages }}"
+```
+
+---
+
+### 🔹 5. Dictionary (Map)
+
+```yaml
+user:
+  name: john
+  shell: /bin/bash
+```
+
+Access:
+
+```yaml
+{{ user.name }}
+```
+
+---
+
+## 4️⃣ Using Variables in Playbook
+
+Syntax:
+
+```yaml
+{{ variable_name }}
+```
+
+Example:
+
+```yaml
+- name: Install package
+  apt:
+    name: "{{ package_name }}"
+    state: present
+```
+
+**⚠ Always use double curly braces.**
+
+---
+
+## 5️⃣ Variable Filters (Modify Variables)
+
+Filters change variable output.
+
+Example:
+
+```yaml
+{{ name | upper }}
+{{ list | length }}
+```
+
+Common filters:
+
+* upper
+* lower
+* length
+* default
+* join
+* replace
+
+Example:
+
+```yaml
+{{ username | default('admin') }}
+```
+
+---
+
+## 6️⃣ Best Practices ⭐
+
+* Do NOT hardcode values
+* Use group_vars for environment configs
+* host_vars → host config
+* vars_files → shared config file
+* role vars → role-specific variables
+* Use meaningful variable names
+* Avoid duplicate definitions
+* Keep secrets in Ansible Vault
+* Use extra vars carefully
+
+---
+
+## 7️⃣ Real-World Example
 
 ```yaml
 - hosts: web
   vars:
     package_name: nginx
+
   tasks:
     - name: Install package
       apt:
         name: "{{ package_name }}"
         state: present
-```
 
-## 🔹 Ways to Define Variables
+    - name: Check service status
+      command: systemctl status {{ package_name }}
+      register: service_status
 
-* In playbook (`vars:`)
-* In inventory
-* In `group_vars/`
-* In `host_vars/`
-* Extra vars (`-e`)
-
-Example:
-
-```bash
-ansible-playbook site.yml -e "package_name=apache2"
-```
-**Q: Variable precedence?**
-Extra vars (`-e`) have highest priority.
-
----
-
-# 3️⃣ Handlers
-
-Handlers are tasks that only run **only when notified**.
-Used mainly for restarting services.
-
-## 🔹 Example
-
-```yaml
-tasks:
-  - name: Update nginx config
-    copy:
-      src: nginx.conf
-      dest: /etc/nginx/nginx.conf
-    notify: Restart nginx
-
-handlers:
-  - name: Restart nginx
-    service:
-      name: nginx
-      state: restarted
-```
-
-✔ Handler runs only if file changed.
-
-## 🎯 Interview Concept
-
-Handlers improve efficiency by avoiding unnecessary service restarts.
-
----
-
-# 4️⃣ Tags
-
-Tags allow running specific tasks.
-
-## 🔹 Example
-
-```yaml
-- name: Install nginx
-  apt:
-    name: nginx
-  tags: nginx
-```
-
-Run only nginx tasks:
-
-```bash
-ansible-playbook site.yml --tags nginx
-```
-
-Skip:
-
-```bash
-ansible-playbook site.yml --skip-tags nginx
+    - debug:
+        var: service_status.stdout
 ```
 
 ---
 
-# 5️⃣ Loops
+# 🔥 Final Quick Revision Summary
 
-Loops repeat tasks.
-
-## 🔹 Example
-
-```yaml
-- name: Install multiple packages
-  apt:
-    name: "{{ item }}"
-    state: present
-  loop:
-    - nginx
-    - git
-    - curl
-```
-## 🎯 Old Method (Still Asked in Interviews)
-
-`with_items` (older style)
+* Variables store dynamic values
+* Defined in playbook, inventory, group_vars, host_vars
+* `-e` has highest priority
+* Use `{{ variable }}` syntax
+* Support strings, numbers, boolen, lists, dictionaries
+* `register` captures task output
+* Facts are auto-generated variables
 
 ---
-
-# 6️⃣ Conditions (when)
-
-Conditions control task execution.
-
-## 🔹 Example
-
-```yaml
-- name: Install Apache on Ubuntu
-  apt:
-    name: apache2
-  when: ansible_distribution == "Ubuntu"
-```
-Only runs on Ubuntu.
-Condition keyword = `when`
-
----
-
-# 7️⃣ Users and Groups in Ansible
-
-Used to manage system users and groups.
-
----
-
-## 🔹 Create User
-
-```yaml
-- name: Create user
-  user:
-    name: devuser
-    state: present
-```
-
----
-
-## 🔹 Create Group
-
-```yaml
-- name: Create group
-  group:
-    name: devgroup
-    state: present
-```
-
----
-
-## 🔹 Add User to Group
-
-```yaml
-- name: Add user to group
-  user:
-    name: devuser
-    groups: devgroup
-    append: yes
-```
-
----
-
-# 8️⃣ Template (Jinja2 Templates)
-
-Templates allow dynamic configuration files.
-File: `nginx.conf.j2`
-
-Example:
-
-```
-server_name {{ domain_name }};
-```
-
-Playbook:
-
-```yaml
-- name: Deploy template
-  template:
-    src: nginx.conf.j2
-    dest: /etc/nginx/nginx.conf
-```
-## 🎯 Why Templates?
-
-✔ Dynamic configs
-✔ Replace variables automatically
-✔ Used heavily in production
-
----
-
-# 9️⃣ Collections
-
-Collections are bundles of:
-
-* Modules
-* Plugins
-* Roles
-
-Example:
-
-```bash
-ansible-galaxy collection install amazon.aws
-```
-
-Used for AWS modules.
-
----
-
-# 🔟 Ansible Vault
-
-Used to encrypt sensitive data.
-
-## 🔹 Encrypt File
-
-```bash
-ansible-vault encrypt secrets.yml
-```
-## 🔹 Edit Encrypted File
-
-```bash
-ansible-vault edit secrets.yml
-```
-## 🔹 Run Playbook with Vault
-
-```bash
-ansible-playbook site.yml --ask-vault-pass
-```
-## 🎯 Interview Concept
-
-Vault protects:
-
-* Passwords
-* API keys
-* Private data
-
----
-
-# 1️⃣1️⃣ Roles
-
-Ansible Roles is a way to organize playbooks into reusable components.
-
-## 🔹 Role Structure
-
-```
-roles/
-  nginx/
-    tasks/
-    handlers/
-    templates/
-    files/
-    vars/
-```
-## 🔹 Use Role in Playbook
-
-```yaml
-- hosts: web
-  roles:
-    - nginx
-```
-## 🎯 Why Roles?
-
-✔ Modular
-✔ Reusable
-✔ Production standard
-
----
-
-# 1️⃣2️⃣ Ansible Galaxy
-
-Ansible Galaxy is a public repository for roles and collections.
-
-## 🔹 Install Role
-
-```bash
-ansible-galaxy install geerlingguy.nginx
-```
-
-## 🔹 Create New Role
-
-```bash
-ansible-galaxy init myrole
-```
-
-## 🎯 Interview Concept
-
-Galaxy helps reuse community-built automation.
-
----
-
-# 🚀 Quick Interview Revision Summary
-
-* Facts → System information
-* Variables → Store values
-* Handlers → Run when notified
-* Tags → Select tasks
-* Loops → Repeat tasks
-* Conditions → Control execution
-* User/Group → Manage system accounts
-* Template → Dynamic configs
-* Collections → Bundle of modules/plugins
-* Vault → Encrypt secrets
-* Roles → Modular automation
-* Galaxy → Community repository
-
----
-
