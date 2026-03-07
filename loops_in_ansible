@@ -1,0 +1,278 @@
+# 1️⃣3️⃣ Loops
+
+Loops allow you to **repeat a task multiple times** with different values.
+Instead of writing the same task again and again, we use loops.
+
+## 1️⃣ Why Loops Are Important?
+
+Without loop ❌
+
+```yaml
+- name: Install nginx
+  apt:
+    name: nginx
+    state: present
+
+- name: Install git
+  apt:
+    name: git
+    state: present
+```
+
+With loop ✅
+
+```yaml
+- name: Install packages
+  apt:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - nginx
+    - git
+```
+
+- Clean
+- Reusable
+- Less code
+
+## 2️⃣ Basic Loop Syntax (Modern Way)
+
+```yaml
+loop:
+  - value1
+  - value2
+```
+
+Inside task, use:
+
+```yaml
+{{ item }}
+```
+
+- `item` = current value in loop
+- `item` is default iterator variable
+
+## 3️⃣ Loop with List Variable
+
+```yaml
+- hosts: web
+  vars:
+    packages:
+      - nginx
+      - git
+      - curl
+
+  tasks:
+    - name: Install packages
+      apt:
+        name: "{{ item }}"
+        state: present
+      loop: "{{ packages }}"
+```
+
+- Best practice
+- More dynamic
+
+## 4️⃣ Loop with Dictionary
+
+```yaml
+vars:
+  users:
+    - name: john
+      shell: /bin/bash
+    - name: alice
+      shell: /bin/zsh
+```
+
+Use in task:
+
+```yaml
+- name: Create users
+  user:
+    name: "{{ item.name }}"
+    shell: "{{ item.shell }}"
+  loop: "{{ users }}"
+```
+
+- Access dictionary values using `item.key`
+
+
+## 5️⃣ Loop with Numbers
+
+```yaml
+- name: Print numbers
+  debug:
+    msg: "Number {{ item }}"
+  loop:
+    - 1
+    - 2
+    - 3
+```
+The Ansible debug module is used to display messages and variable values during playbook execution. It is mainly used for troubleshooting and understanding playbook behavior.
+- `msg` Print custom message with variable values, variable inserted using `{{ item }}` 
+- `var` Print variable directly
+
+## 6️⃣ Loop with range()
+
+```yaml
+- name: Print numbers
+  debug:
+    msg: "{{ item }}"
+  loop: "{{ range(1, 6) | list }}"
+```
+
+Output:
+
+```
+1 2 3 4 5
+```
+
+## 7️⃣ loop_control (Advanced Usage ⭐)
+
+You can control loop behavior.
+
+### Rename loop variable
+
+```yaml
+- name: Install packages
+  apt:
+    name: "{{ pkg }}"
+  loop:
+    - nginx
+    - git
+  loop_control:
+    loop_var: pkg
+```
+
+✔ Avoid conflict when using nested loops
+
+### Add Index
+
+```yaml
+- name: Show index
+  debug:
+    msg: "Index {{ index }} Value {{ item }}"
+  loop:
+    - a
+    - b
+    - c
+  loop_control:
+    index_var: index
+```
+
+## 8️⃣ Nested Loops
+
+```yaml
+vars:
+  users:
+    - john
+    - alice
+  databases:
+    - db1
+    - db2
+```
+
+```yaml
+- name: Assign DB to users
+  debug:
+    msg: "{{ item.0 }} -> {{ item.1 }}"
+  loop: "{{ users | product(databases) | list }}"
+```
+
+✔ Used in advanced automation
+
+---
+
+## 9️⃣ Old Loop Method (Deprecated)
+
+Before Ansible 2.5:
+
+```yaml
+with_items:
+  - nginx
+  - git
+```
+
+Now recommended to use:
+
+```yaml
+loop:
+```
+
+## 🔟 Loop with Condition
+
+```yaml
+- name: Install only nginx
+  debug:
+    msg: "{{ item }}"
+  loop:
+    - nginx
+    - git
+  when: item == "nginx"
+```
+
+## 1️⃣1️⃣ Loop with Registered Variable
+
+```yaml
+- name: Check multiple services
+  command: systemctl status {{ item }}
+  loop:
+    - nginx
+    - ssh
+  register: service_status
+```
+
+Now access:
+
+```yaml
+- debug:
+    var: service_status.results
+```
+
+Important ⭐
+When registering loop output → result stored in `results` list.
+
+## 1️⃣2️⃣ Real DevOps Example
+
+Create multiple users:
+
+```yaml
+- hosts: web
+  vars:
+    user_list:
+      - dev1
+      - dev2
+      - dev3
+
+  tasks:
+    - name: Create users
+      user:
+        name: "{{ item }}"
+        state: present
+      loop: "{{ user_list }}"
+```
+
+## 🔥 Common Loop Filters
+
+| Filter    | Purpose           |
+| --------- | ----------------- |
+| range()   | Generate numbers  |
+| product() | Nested loops      |
+| zip()     | Combine lists     |
+| flatten() | Remove nesting    |
+| unique    | Remove duplicates |
+
+Example:
+
+```yaml
+loop: "{{ list1 | zip(list2) | list }}"
+```
+
+## 🚀 Quick Revision Summary
+
+* Use `loop:` to repeat tasks
+* `item` holds current value
+* Works with lists and dictionaries
+* `loop_control` modifies behavior
+* Registered loop output stored in `results`
+* `with_items` is old
