@@ -960,6 +960,7 @@ ansible-playbook <playbook_name>.yml [options]
 * `ansible-playbook site.yml --diff`  # Show differences between current and desired state
 * `ansible-playbook site.yml --limit web`  # Run playbook only on "web" group
 * `ansible-playbook site.yml --limit 192.168.1.10`  # Run playbook on a specific host
+* `ansible-playbook site.yml --list-tags` # list all tags
 * `ansible-playbook site.yml --tags nginx`  # Run only tasks tagged as "nginx"
 * `ansible-playbook site.yml --skip-tags db`  # Skip tasks tagged as "db"
 * `ansible-playbook site.yml --start-at-task "Install nginx"`  # Start execution from a specific task
