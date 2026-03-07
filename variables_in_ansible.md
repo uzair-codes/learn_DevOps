@@ -137,7 +137,8 @@ project/
 ├── inventory/
 │    ├── hosts.ini
 │    ├── group_vars/
-│    │     └── web.yml  
+│    │     └── web.yml
+│    │     └── all.yml
 │    └── host_vars/
 │          └── server1.yml
 └── site.yml
@@ -153,6 +154,7 @@ If name does not match → variables will NOT load.
 - So, the filenames `web.yml` and `server1.yml` must match the **group and host names exactly**
 - Variables in `web.yml` applies to all hosts in group `web`.
 - Variables in `server1.yml` applies only to `server1`.
+- Variables in `all.yml` applies to `all target servers`
 
 #### 🔹 Can group_vars and host_vars Be Placed Elsewhere?
 
