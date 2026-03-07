@@ -135,7 +135,7 @@ server2
 project/
 │
 ├── inventory/
-│    ├── hosts
+│    ├── hosts.ini
 │    ├── group_vars/
 │    │     └── web.yml  
 │    └── host_vars/
