@@ -1,0 +1,17 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: portfolio-ingress
+spec:
+  ingressClassName: nginx  #  Useful when multiple controllers are runnig
+  rules:
+  - host: uzair.com
+    http:
+      paths:
+      - path: /portfolio
+        pathType: Prefix
+        backend:
+          service:
+            name: portfolio-service  #  Wahi normal service ka naam jo aapne upar banayi thi!
+            port:
+              number: 80         #  Wahi port jo service.yaml mein tha
