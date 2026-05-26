@@ -69,7 +69,7 @@ This is exactly how a normal Kubernetes Service behaves.
 
 ---
 
-# How Kubernetes Service Works
+## How Kubernetes Service Works
 
 A Kubernetes Service mainly performs:
 
@@ -95,11 +95,9 @@ But enterprise applications require much more intelligence.
 
 ---
 
-# Features Missing in Kubernetes Services
+## Features Missing in Kubernetes Services
 
----
-
-## 1. Path-Based Routing
+### 1. Path-Based Routing
 
 Suppose your website is:
 
@@ -136,7 +134,7 @@ It cannot understand:
 
 ---
 
-## 2. Host-Based Routing
+### 2. Host-Based Routing
 
 Suppose your company has multiple domains:
 
@@ -156,7 +154,7 @@ Kubernetes Services cannot inspect domain names and route traffic differently ba
 
 ---
 
-## 3. Sticky Sessions
+### 3. Sticky Sessions
 
 This is extremely important for applications like:
 
@@ -164,7 +162,7 @@ This is extremely important for applications like:
 * login systems
 * banking systems
 
-### The Problem
+#### The Problem
 
 Suppose:
 
@@ -186,7 +184,7 @@ The session breaks.
 
 ---
 
-## What is Sticky Session?
+#### What is Sticky Session?
 
 Sticky Session means:
 
@@ -196,7 +194,7 @@ Normal Kubernetes Services do not provide advanced sticky session capabilities l
 
 ---
 
-## 4. SSL/TLS Handling
+### 4. SSL/TLS Handling
 
 Modern websites use:
 
@@ -223,7 +221,7 @@ Large companies need centralized SSL management.
 
 ---
 
-# Conclusion of Problem 1
+## Conclusion of Problem 1
 
 Kubernetes Services are good for:
 
@@ -240,7 +238,7 @@ But they lack:
 
 Companies needed a smarter solution.
 
-That solution is: **`Ingress`**
+That solution is: Ingress
 
 ---
 
@@ -250,7 +248,7 @@ This is another huge real-world problem.
 
 ---
 
-# Understanding with a Real-Life Example
+## Understanding with a Real-Life Example
 
 Imagine a building with 100 offices.
 
@@ -269,7 +267,7 @@ This is exactly what happens with Kubernetes LoadBalancer Services.
 
 ---
 
-# What Happens with LoadBalancer Services
+## What Happens with LoadBalancer Services
 
 Suppose you have these microservices:
 
@@ -293,7 +291,7 @@ for every Service.
 
 ---
 
-# Why This Becomes Expensive
+## Why This Becomes Expensive
 
 Cloud providers like:
 
@@ -324,11 +322,11 @@ would become extremely expensive.
 
 ---
 
-# How Ingress Solves This Problem
+## How Ingress Solves This Problem
 
 Ingress introduces the idea of:
 
-# Single Entry Point
+### Single Entry Point
 
 Instead of:
 
@@ -375,7 +373,7 @@ It receives external HTTP/HTTPS traffic and forwards requests to the correct Kub
 
 ---
 
-# Simple Definition
+## Simple Definition
 
 Ingress is a Layer 7 routing mechanism in Kubernetes that routes HTTP and HTTPS traffic to different Services based on:
 
@@ -399,11 +397,11 @@ Ingress is a Layer 7 routing mechanism in Kubernetes that routes HTTP and HTTPS 
 
 ---
 
-# Layer 4 vs Layer 7
+## Layer 4 vs Layer 7
 
 Kubernetes Services work at:
 
-# Layer 4
+### Layer 4
 
 They understand:
 
@@ -412,7 +410,7 @@ They understand:
 
 Ingress works at:
 
-# Layer 7
+### Layer 7
 
 It understands:
 
@@ -440,7 +438,7 @@ Without an Ingress Controller, Ingress rules do nothing.
 
 ---
 
-# 1. Ingress Controller
+## 1. Ingress Controller
 
 The Ingress Controller is the actual software handling traffic.
 
@@ -457,7 +455,7 @@ It receives incoming traffic and applies routing logic.
 
 ---
 
-# 2. Ingress Resource
+## 2. Ingress Resource
 
 Ingress Resource is a YAML configuration file containing routing rules.
 
@@ -470,7 +468,7 @@ Example:
 
 ---
 
-# Ingress Traffic Flow
+## Ingress Traffic Flow
 
 Here is the full flow:
 
@@ -490,7 +488,7 @@ Correct Pod
 
 ---
 
-# Step-by-Step Example
+### Step-by-Step Example
 
 User opens:
 
@@ -498,7 +496,7 @@ User opens:
 my-website.com/login
 ```
 
-## Step 1 — Request Arrives
+#### Step 1 — Request Arrives
 
 Traffic reaches:
 
@@ -510,7 +508,7 @@ through:
 
 ---
 
-## Step 2 — Controller Reads Rules
+#### Step 2 — Controller Reads Rules
 
 Ingress Controller checks rules:
 
@@ -520,7 +518,7 @@ Ingress Controller checks rules:
 
 ---
 
-## Step 3 — Traffic Routed
+#### Step 3 — Traffic Routed
 
 Traffic forwarded to:
 
@@ -530,7 +528,7 @@ login-service
 
 ---
 
-## Step 4 — Service Sends to Pod
+#### Step 4 — Service Sends to Pod
 
 Service forwards request to the correct Pod.
 
@@ -598,9 +596,9 @@ spec:
 
 ---
 
-# Understanding This YAML
+## Understanding This YAML
 
-## ingressClassName
+### ingressClassName
 
 ```yaml
 ingressClassName: nginx
@@ -618,7 +616,7 @@ Useful when multiple controllers exist.
 
 ---
 
-## Host
+### Host
 
 ```yaml
 host: my-website.com
@@ -628,7 +626,7 @@ Specifies the domain name.
 
 ---
 
-## Path
+### Path
 
 ```yaml
 path: /login
@@ -644,7 +642,7 @@ traffic goes to backend Service.
 
 ---
 
-## Backend Service
+### Backend Service
 
 ```yaml
 name: login-service
